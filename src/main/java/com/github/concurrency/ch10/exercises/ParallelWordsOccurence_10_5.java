@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -29,25 +30,18 @@ public class ParallelWordsOccurence_10_5 {
                 .listFiles(File::isFile);
         ParallelWordsOccurence_10_5 app = new ParallelWordsOccurence_10_5();
         app.execute(files);
-        app.printResults();
         app.stop();
+        app.printResults();
     }
 
-    private void stop() {
+    private void stop() throws InterruptedException {
         pool.shutdown();
+        pool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
     }
 
-    //TODO how to wait for results???
     private void printResults() {
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         map.forEach((k, v) -> System.out.println(k + " - " + v.stream().flatMap(f -> Stream.of(f.getName())).collect(Collectors.joining(","))));
         System.out.println("Received " + map.size() + " results");
-
     }
 
     private void execute(File[] files) throws Exception {

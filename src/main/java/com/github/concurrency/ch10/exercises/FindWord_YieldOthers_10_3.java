@@ -17,20 +17,21 @@ import java.util.stream.Stream;
 public class FindWord_YieldOthers_10_3 {
 
     public static void main(String[] args) throws Exception {
-        new FindWord_YieldOthers_10_3().execute();
+        File[] files = new File(FindWord_YieldOthers_10_3.class.getResource("/text").toURI().getPath())
+                .listFiles(File::isFile);
+        new FindWord_YieldOthers_10_3().execute(files);
     }
 
     /**
      * Checks not word presence but presence of symbols sequence.
      * @throws Exception
+     * @param files
      */
-    public void execute() throws Exception {
+    public void execute(File[] files) throws Exception {
 
         String word = "and";
 
         ExecutorService pool = Executors.newCachedThreadPool();
-        File[] files = new File(FindWord_YieldOthers_10_3.class.getResource("/text").toURI().getPath())
-                .listFiles(File::isFile);
         FileUtil util = new FileUtil();
 
         Stream.of(files).forEach(f -> {
