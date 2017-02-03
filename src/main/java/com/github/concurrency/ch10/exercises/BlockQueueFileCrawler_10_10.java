@@ -4,7 +4,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
 /**
@@ -35,7 +34,7 @@ public class BlockQueueFileCrawler_10_10 {
     }
 
     private void execute(String path, String keyword) {
-        System.out.println("start");
+        //writer
         CompletableFuture.runAsync(() -> {
 
             try {
@@ -61,40 +60,38 @@ public class BlockQueueFileCrawler_10_10 {
             }
         }, pool);
 
-
-        AtomicBoolean completed = new AtomicBoolean(false);
+        //reader
         IntStream.range(0, NUM_OF_READERS).forEach(
                 (ignore) -> CompletableFuture.runAsync(() -> {
                     //let it just check name of file not it's content
-                    while (!completed.get()) {
+
+                    boolean completed = false;
+                    while (!completed) {
 
                         try {
                             File file = queue.poll(100, TimeUnit.MILLISECONDS);
                             if (file != null) {
 
-                                System.out.println("<<< polled file=" + file.getName());
+                                System.out.println("<<< peeked file=" + file.getName());
                                 if (file.equals(DUMMY)) {
-                                    completed.set(true);
+                                    completed = true;
+                                    //put dummy to queue for reader threads which a waiting for completion marker
+                                    queue.put(DUMMY);
                                 }
 
-                                if (!completed.get() && file.getName().contains(keyword)) {
+                                if (!completed && file.getName().contains(keyword)) {
                                     System.out.println("found keyword '" + keyword + "' in file=" + file.getName());
                                 }
                             }
-
-                            if (completed.get()) {
-                                System.out.println(">>>>>>>>>>>>>> Mark as COMPLETED");
-                            }
-
                         } catch (InterruptedException e) {
                             //ignore
                         }
                     }
+
                     System.out.println(">>> COMPLETE");
                 }, pool)
         );
 
         pool.shutdown();
-        System.out.println("end");
     }
 }
