@@ -17,9 +17,10 @@ public class BlockQueueFileCrawler_10_10 {
     public static final int NUM_OF_READERS = 4;
     public static final File DUMMY = new File("<DUMMY>");
     private BlockingQueue<File> queue = new LinkedBlockingQueue<>();
-    private ExecutorService pool = Executors.newFixedThreadPool(NUM_OF_READERS + 1);
+    private ExecutorService pool;
+    private ConcurrentLinkedQueue<File> foundInFiles = new ConcurrentLinkedQueue<>();
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         final String path = args[0];
         final String keyword = args[1];
         if (path == null || path.isEmpty()) {
@@ -29,11 +30,23 @@ public class BlockQueueFileCrawler_10_10 {
             throw new IllegalArgumentException("Provide keyword as second argument");
         }
 
-
         new BlockQueueFileCrawler_10_10().execute(path, keyword);
     }
 
-    private void execute(String path, String keyword) {
+    private void execute(String path, String keyword) throws InterruptedException {
+        pool = Executors.newFixedThreadPool(NUM_OF_READERS + 1);
+
+        executeWriter(path);
+        executeReaders(keyword);
+
+        pool.shutdown();
+        pool.awaitTermination(10, TimeUnit.SECONDS);
+        System.out.println("\n********************************************\nfound results: " + foundInFiles.size());
+        System.out.println("results:");
+        foundInFiles.forEach(System.out::println);
+    }
+
+    private void executeWriter(String path) {
         //writer
         CompletableFuture.runAsync(() -> {
 
@@ -59,8 +72,11 @@ public class BlockQueueFileCrawler_10_10 {
                 throw new RuntimeException(e);
             }
         }, pool);
+    }
 
-        //reader
+    private void executeReaders(String keyword) {
+        FileUtil fileUtil = new FileUtil();
+
         IntStream.range(0, NUM_OF_READERS).forEach(
                 (ignore) -> CompletableFuture.runAsync(() -> {
                     //let it just check name of file not it's content
@@ -79,11 +95,13 @@ public class BlockQueueFileCrawler_10_10 {
                                     queue.put(DUMMY);
                                 }
 
-                                if (!completed && file.getName().contains(keyword)) {
+                                if (!completed && fileUtil.containsWord(file, keyword)) {
                                     System.out.println("found keyword '" + keyword + "' in file=" + file.getName());
+
+                                    foundInFiles.add(file);
                                 }
                             }
-                        } catch (InterruptedException e) {
+                        } catch (Exception e) {
                             //ignore
                         }
                     }
@@ -91,7 +109,5 @@ public class BlockQueueFileCrawler_10_10 {
                     System.out.println(">>> COMPLETE");
                 }, pool)
         );
-
-        pool.shutdown();
     }
 }
