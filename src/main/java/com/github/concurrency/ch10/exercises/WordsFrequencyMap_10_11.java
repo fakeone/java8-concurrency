@@ -16,7 +16,9 @@ import java.util.stream.Stream;
  * A final thread merges the dictionaries and prints the ten most common words.
  * Why don’t you need to use a ConcurrentHashMap?
  */
-//TODO use separate map for every writer?
+
+//TODO use return of CompletableFuture, apply streams with flatMap/etc., instead of forEach
+
 public class WordsFrequencyMap_10_11 {
 
     public static final int NUM_OF_READERS = 4;
